@@ -1,23 +1,30 @@
 import { v2 as cloudinary } from "cloudinary";
+import { configDotenv } from "dotenv";
+configDotenv();
 import fs from "fs";
-import ApiError from "./ApiError";
+import { upload } from "../middlewares/multer.middleware.js";
+
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_SECRET_KEY,
 });
-const uploadOnCloudinary = async (localpath) => {
+
+const uploadOnCloudinary = async (localFilePath) => {
   try {
-    if (!localpath) {
-      throw new ApiError(404, "local path missing");
-    }
-    const response = await cloudinary.uploader.upload(localpath, {
+    console.log(localFilePath);
+    if (!localFilePath) return null;
+    const response = await cloudinary.uploader.upload(localFilePath, {
       resource_type: "auto",
     });
-    fs.unlinkSync(localpath);
+
+    console.log("file has been uploaded", response.url);
+    fs.unlinkSync(localFilePath);
     return response;
   } catch (error) {
-    throw new ApiError(500, "something went wrong while uploading");
+    console.log(error);
+    fs.unlinkSync(localFilePath);
+    return null;
   }
 };
 export default uploadOnCloudinary;
