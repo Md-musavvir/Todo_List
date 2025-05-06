@@ -4,10 +4,15 @@ const todoSchema = new Schema(
   {
     title: {
       type: String,
+      required: true,
     },
     completed: {
       type: Boolean,
       default: false,
+    },
+    dueDate: {
+      type: Date,
+      required: true,
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,

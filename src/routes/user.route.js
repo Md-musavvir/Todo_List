@@ -1,29 +1,38 @@
 import { Router } from "express";
-import { upload } from "./../middlewares/multer.middleware.js";
+import { upload } from "../middlewares/multer.middleware.js";
 import {
+  changeAvatar,
+  changeCoverImage,
+  changeDetails,
+  changePassword,
   loginUser,
   logoutUser,
   refreshAccessToken,
   registerUser,
 } from "../controllers/user.controller.js";
-
 import verifyJwt from "../middlewares/auth.middleware.js";
+
 const router = Router();
-router.route("/register").post(
+
+router.post(
+  "/register",
   upload.fields([
-    {
-      name: "avatar",
-      maxCount: 1,
-    },
-    {
-      name: "coverImage",
-      maxCount: 1,
-    },
+    { name: "avatar", maxCount: 1 },
+    { name: "coverImage", maxCount: 1 },
   ]),
   registerUser
 );
-router.route("/login").post(loginUser);
-router.route("/logout").post(verifyJwt, logoutUser);
-router.route("/refreshToken").post(verifyJwt, refreshAccessToken);
+
+router.post("/login", loginUser);
+
+// Secure Routes
+router.use(verifyJwt);
+
+router.post("/logout", logoutUser);
+router.post("/refreshToken", refreshAccessToken);
+router.put("/changePassword", changePassword);
+router.put("/changeDetails", changeDetails);
+router.put("/changeAvatar", upload.single("avatar"), changeAvatar);
+router.put("/changeCover", upload.single("coverImage"), changeCoverImage);
 
 export default router;
