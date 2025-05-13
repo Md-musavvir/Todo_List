@@ -1,8 +1,8 @@
 import { v2 as cloudinary } from "cloudinary";
 import { configDotenv } from "dotenv";
-configDotenv();
 import fs from "fs";
-import { upload } from "../middlewares/multer.middleware.js";
+
+configDotenv();
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_NAME,
@@ -12,19 +12,31 @@ cloudinary.config({
 
 const uploadOnCloudinary = async (localFilePath) => {
   try {
-    console.log(localFilePath);
-    if (!localFilePath) return null;
+    if (!localFilePath) {
+      console.log("No file path provided");
+      return null;
+    }
+
+    console.log("Uploading file to Cloudinary:", localFilePath);
+
     const response = await cloudinary.uploader.upload(localFilePath, {
       resource_type: "auto",
     });
 
-    console.log("file has been uploaded", response.url);
+    console.log("File uploaded successfully:", response.url);
+
     fs.unlinkSync(localFilePath);
+
     return response;
   } catch (error) {
-    console.log(error);
-    fs.unlinkSync(localFilePath);
+    console.log("Error uploading file:", error);
+
+    if (fs.existsSync(localFilePath)) {
+      fs.unlinkSync(localFilePath);
+    }
+
     return null;
   }
 };
+
 export default uploadOnCloudinary;

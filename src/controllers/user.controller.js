@@ -14,67 +14,84 @@ const generateRefreshAndAccessToken = async (User_id) => {
   return { accessToken, refreshToken };
 };
 const registerUser = asyncHandler(async (req, res) => {
-  //take data from user
-  //check if valid data is sent or not
-  //check if user already exist or not
-  //get avatar and image paths
-  //upload on cloudinary
-  //create user object in database
-  //remove sensitive data from response
-  //then send the response
   const { fullName, username, email, password } = req.body;
-  if (
-    [fullName, username, email, password].some((field) => field?.trim() === "")
-  ) {
-    throw new ApiError(400, "All fields are required");
-  }
-  const existedUSer = await User.findOne({
-    $or: [{ username }, { email }],
-  });
-  if (existedUSer) {
-    throw new ApiError(400, "User Already exists");
-  }
-  const avatarPath = req.files?.avatar[0].path;
-  let coverImagePath;
-  if (
-    req.files &&
-    Array.isArray(req.files.coverImage) &&
-    req.files.coverImage.length > 0
-  ) {
-    coverImagePath = req.files.coverImage[0].path;
-  }
-  if (!avatarPath) {
-    throw new ApiError(400, "avatar not recieved");
-  }
-  let coverImage;
 
-  const avatar = await uploadOnCloudinary(avatarPath);
-  if (coverImagePath) {
-    coverImage = await uploadOnCloudinary(coverImagePath);
-  }
+  try {
+    if (
+      [fullName, username, email, password].some(
+        (field) => field?.trim() === ""
+      )
+    ) {
+      throw new ApiError(400, "All fields are required");
+    }
 
-  if (!avatar) {
-    console.log(avatar, "not recieved");
-    throw new ApiError(500, "something went wrong while uploading");
+    const existedUser = await User.findOne({
+      $or: [{ username }, { email }],
+    });
+
+    if (existedUser) {
+      throw new ApiError(400, "User Already exists");
+    }
+
+    const avatarPath = req.files?.avatar[0].path;
+    let coverImagePath;
+
+    if (
+      req.files &&
+      Array.isArray(req.files.coverImage) &&
+      req.files.coverImage.length > 0
+    ) {
+      coverImagePath = req.files.coverImage[0].path;
+    }
+
+    if (!avatarPath) {
+      throw new ApiError(400, "Avatar not received");
+    }
+
+    let avatar = await uploadOnCloudinary(avatarPath);
+    let coverImage;
+
+    if (coverImagePath) {
+      coverImage = await uploadOnCloudinary(coverImagePath);
+    }
+
+    // Check if avatar is valid and contains a URL or secure_url
+    if (!avatar || (!avatar.url && !avatar.secure_url)) {
+      console.log(avatar, "not received or URL missing");
+      throw new ApiError(500, "Something went wrong while uploading avatar");
+    }
+
+    // Check if coverImage is valid and contains a URL or secure_url
+    const coverImageUrl = coverImage?.url || coverImage?.secure_url || "";
+
+    const user = await User.create({
+      fullName,
+      username: username.toLowerCase(),
+      email,
+      avatar: avatar.url || avatar.secure_url, // Use secure_url if URL is not available
+      coverImage: coverImageUrl,
+      password,
+    });
+
+    const createdUser = await User.findById(user._id).select(
+      "-password -refreshToken"
+    );
+
+    if (!createdUser) {
+      throw new ApiError(500, "Something went wrong while registering");
+    }
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, createdUser, "User registered successfully"));
+  } catch (error) {
+    console.log(error);
+    return res.status(error.statusCode || 500).json({
+      message: error.message || "Something went wrong",
+    });
   }
-  const user = await User.create({
-    fullName,
-    username: username.toLowerCase(),
-    email,
-    avatar: avatar.url,
-    coverImage: coverImage.url || "",
-    password,
-  });
-  const createdUser = await User.findById(user._id).select(
-    "-password -refreshToken"
-  );
-  if (!createdUser) {
-    throw new ApiError(500, "something went wrong while registering");
-  }
-  return res
-    .status(200)
-    .json(new ApiResponse(200, createdUser, "user registered successfully"));
 });
+
 const loginUser = asyncHandler(async (req, res) => {
   //get data from user
   //username or email

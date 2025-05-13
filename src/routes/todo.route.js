@@ -8,7 +8,6 @@ import {
 } from "../controllers/todo.controller.js";
 
 const router = Router();
-
 router.use(verifyJwt);
 
 router.post("/createTodo", createTodo);

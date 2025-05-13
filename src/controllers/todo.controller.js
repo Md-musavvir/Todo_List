@@ -28,24 +28,44 @@ const getAllTodo = asyncHandler(async (req, res) => {
 });
 const deleteTodo = asyncHandler(async (req, res) => {
   const { todoId } = req.params;
+
+  console.log("Requested Todo ID:", todoId);
+  console.log("Authenticated User ID from Token:", req.user._id);
+
   if (!todoId) {
-    throw new ApiError(400, "no todoId is present");
+    throw new ApiError(400, "No todoId is present");
   }
+
+  // Optional: Check if todo exists and belongs to this user
+  const todoCheck = await Todo.findById(todoId);
+  if (!todoCheck) {
+    throw new ApiError(404, "Todo not found");
+  }
+  console.log("Found Todo:", todoCheck);
+  console.log("Todo's userId:", todoCheck.userId);
+
+  // Delete only if it belongs to the current user
   const todo = await Todo.findOneAndDelete({
     _id: todoId,
     userId: req.user._id,
   });
+
   if (!todo) {
-    throw new ApiError(404, "no todo found");
+    throw new ApiError(403, "Not authorized to delete this todo");
   }
-  res.status(200).json(new ApiResponse(200, {}, "todo deleted sucsessfuly"));
+
+  res.status(200).json(new ApiResponse(200, {}, "Todo deleted successfully"));
 });
+
 const updateTodo = asyncHandler(async (req, res) => {
   try {
     const { todoId } = req.params;
+
     const { title, completed, dueDate } = req.body;
 
     if (!todoId) {
+      console.log(req.params);
+
       throw new ApiError(400, "Todo ID is required");
     }
 
@@ -58,7 +78,7 @@ const updateTodo = asyncHandler(async (req, res) => {
     }
 
     const updatedTodo = await Todo.findOneAndUpdate(
-      { _id: todoId, userId: req.user._id },
+      { _id: todoId },
       { $set: { title, completed, dueDate } },
       { new: true, runValidators: true }
     );
